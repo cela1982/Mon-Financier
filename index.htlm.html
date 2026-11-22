@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Mon financier</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 700px; margin: 20px auto; padding: 0 12px; color: #222; }
+  label { display: block; margin-top: 10px; font-size: 14px; }
+  input, select, button { width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; font-size: 15px; }
+  button { background: #1F3864; color: white; border: none; margin-top: 14px; cursor: pointer; }
+  .secondaire { background: #666; }
+  .lien-suivi { display: block; text-align: center; background: #2E7D32; color: white; text-decoration: none; padding: 10px; margin-top: 16px; border-radius: 4px; font-size: 15px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
+  th, td { border-bottom: 1px solid #ddd; padding: 6px; text-align: left; }
+</style>
+</head>
+<body>
+<h1>Mon financier</h1>
+
+<label>Type
+  <select id="type">
+    <option value="Dépense">Dépense</option>
+    <option value="Rentrée d'argent">Rentrée d'argent</option>
+  </select>
+</label>
+<label>Date <input type="date" id="date"></label>
+<label>Description <input type="text" id="description"></label>
+<label>Catégorie
+  <select id="categorie">
+    <option>Épicerie</option><option>Essence</option><option>Soccer</option>
+    <option>Sorties</option><option>Vêtements</option><option>Abonnements</option>
+    <option>Autres personnelles</option><option>Entretien</option><option>Épargne</option>
+    <option>Paie</option><option>Allocation</option><option>Bonus</option><option>Autre</option>
+  </select>
+</label>
+<label>Montant ($) <input type="number" step="0.01" id="montant"></label>
+<label><input type="checkbox" id="confirme" style="width:auto"> Montant vérifié</label>
+
+<button id="btnEnregistrer" onclick="ajouter()">Enregistrer</button>
+<div id="msg" style="margin-top:10px;font-size:14px"></div>
+
+<a class="lien-suivi" href="https://docs.google.com/spreadsheets/d/1QMkaEzlVlJ7AxXGFbUkT-Z08W2XqIrvw/edit?gid=1009512687#gid=1009512687" target="_blank">Voir mon suivi (Google Sheets)</a>
+
+<h2 style="font-size:16px;margin-top:24px">Dernières entrées</h2>
+<button onclick="charger()" class="secondaire">Actualiser</button>
+<table id="liste"></table>
+
+<script>
+const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbykYVGALznaTnvFJ-8vdQZFODGXxA4Bh0LD1zSVsVS2QDRwEKY3QwxdKSxL7ObGd68R/exec";
+
+function ajouter() {
+  const btn = document.getElementById("btnEnregistrer");
+  const date = document.getElementById("date").value;
+  const montant = parseFloat(document.getElementById("montant").value);
+  if (!date || isNaN(montant)) {
+    document.getElementById("msg").textContent = "Entre au moins la date et le montant.";
+    return;
+  }
+  const d = new Date(date + "T12:00:00");
+  const mois = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+  const data = {
+    date: date,
+    paie: document.getElementById("type").value,
+    mois: mois,
+    description: document.getElementById("description").value,
+    categorie: document.getElementById("categorie").value,
+    montant: montant,
+    confirme: document.getElementById("confirme").checked ? "oui" : "non"
+  };
+  btn.disabled = true;
+  document.getElementById("msg").textContent = "Envoi en cours...";
+  fetch(URL_APPS_SCRIPT, { method: "POST", body: JSON.stringify(data) })
+    .then(r => r.json())
+    .then(() => {
+      document.getElementById("msg").textContent = "Enregistré : " + data.paie.toLowerCase() + ".";
+      document.getElementById("description").value = "";
+      document.getElementById("montant").value = "";
+      charger();
+    })
+    .catch(() => document.getElementById("msg").textContent = "Erreur d'envoi. Vérifie la feuille avant de réessayer.")
+    .finally(() => btn.disabled = false);
+}
+
+function charger() {
+  fetch(URL_APPS_SCRIPT)
+    .then(r => r.json())
+    .then(res => {
+      const t = document.getElementById("liste");
+      t.innerHTML = "<tr><th>Date</th><th>Type</th><th>Description</th><th>Catégorie</th><th>Montant</th></tr>";
+      res.rows.slice(1).forEach(r => {
+        const date = String(r[0]).slice(0, 10);
+        t.innerHTML += `<tr><td>${date}</td><td>${r[1]}</td><td>${r[3]}</td><td>${r[4]}</td><td>${r[5]}</td></tr>`;
+      });
+    })
+    .catch(() => document.getElementById("msg").textContent = "Impossible de charger la liste.");
+}
+
+charger();
+</script>
+</body>
+</html>
