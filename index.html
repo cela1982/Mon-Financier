@@ -81,6 +81,38 @@ function ajouter() {
     .finally(() => btn.disabled = false);
 }
 
+function ajouter() {
+  const btn = document.getElementById("btnEnregistrer");
+  const date = document.getElementById("date").value;
+  const montant = parseFloat(document.getElementById("montant").value);
+  if (!date || isNaN(montant)) {
+    document.getElementById("msg").textContent = "Entre au moins la date et le montant.";
+    return;
+  }
+  const d = new Date(date + "T12:00:00");
+  const mois = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+  const params = new URLSearchParams({
+    date: date,
+    paie: document.getElementById("type").value,
+    mois: mois,
+    description: document.getElementById("description").value,
+    categorie: document.getElementById("categorie").value,
+    montant: montant,
+    confirme: document.getElementById("confirme").checked ? "oui" : "non"
+  });
+  btn.disabled = true;
+  document.getElementById("msg").textContent = "Envoi en cours...";
+  fetch(URL_APPS_SCRIPT + "?" + params.toString(), { mode: "no-cors" })
+    .then(() => {
+      document.getElementById("msg").textContent = "Enregistré. Vérifie la feuille.";
+      document.getElementById("description").value = "";
+      document.getElementById("montant").value = "";
+      setTimeout(charger, 1500);
+    })
+    .catch(() => document.getElementById("msg").textContent = "Erreur d'envoi. Vérifie la feuille avant de réessayer.")
+    .finally(() => btn.disabled = false);
+}
+  
 function charger() {
   fetch(URL_APPS_SCRIPT)
     .then(r => r.json())
